@@ -19,7 +19,13 @@ allprojects {
   apply plugin: 'eclipse'
 
   group = 'com.axelor.apps'
-  version = '8.1.11'
+  version = '8.4.2'
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+    }
+  }
 
   afterEvaluate {
     test {
@@ -32,12 +38,14 @@ allprojects {
 
   configurations {
     runtimeClasspath.exclude group: "org.eclipse.birt.runtime.3_7_1", module: "org.apache.commons.codec"
+    runtimeClasspath.exclude group: "org.eclipse.birt.runtime.3_7_1", module: "com.lowagie.text"
   }
 }
 
 tasks.withType(PublishToMavenRepository).configureEach { it.enabled = false }
 
 dependencies {
+tasks.withType(PublishToMavenRepository).configureEach { it.enabled = false }
   gradle.appModules.each { dir ->
     implementation project(":modules:$dir.name")
   }
@@ -62,7 +70,7 @@ task archiveReports(type: Zip) {
     }
   }
 
-  classifier 'reports'
+  archiveClassifier = 'reports'
   includeEmptyDirs = false
   destinationDirectory = file("$buildDir/libs")
 }
@@ -79,7 +87,7 @@ task generateChangelog(type: GenerateAosChangelog) {
 
 task checkCsvEOL(type: CheckEOLCharsInCsv) {
   group "Axelor application"
-  description "Generate change logs from unreleased entries."
+  description "Check end-of-line characters in CSV files."
   files = fileTree(projectDir) {
     exclude '**/build'
     exclude '**/bin'
@@ -90,7 +98,7 @@ task checkCsvEOL(type: CheckEOLCharsInCsv) {
 
 task checkBirtCredentials(type: CheckCredentialsInRptdesign) {
   group "Axelor application"
-  description "Generate change logs from unreleased entries."
+  description "Check if .rptdesign files (BIRT) contain credentials."
   files = fileTree(projectDir) {
     exclude '**/build'
     exclude '**/bin'
@@ -98,7 +106,6 @@ task checkBirtCredentials(type: CheckCredentialsInRptdesign) {
     include '**/*.rptdesign'
   }
 }
-
 
 task checkXmlDomainsAttributes(type: CheckXmlDomainsAttributes) {
   group "Axelor application"
@@ -139,3 +146,16 @@ task checkXmlImportsAttributes(type: CheckXmlImportsAttributes) {
 task checkXml(dependsOn: ['checkXmlDomainsAttributes','checkXmlViewsAttributes', 'checkXmlImportsAttributes'])
 
 build.finalizedBy archiveReports
+
+allprojects {
+  configurations.all {
+    resolutionStrategy.eachDependency { details ->
+      if (details.requested.group == 'org.eclipse.angus') {
+        details.useTarget 'com.sun.mail:javax.mail:1.6.2'
+      }
+      if (details.requested.group == 'jakarta.activation') {
+//        details.useTarget 'javax.activation:activation:1.1.1'
+      }
+    }
+  }
+}
